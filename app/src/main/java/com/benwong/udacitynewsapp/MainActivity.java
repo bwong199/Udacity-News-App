@@ -23,11 +23,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
-    ArrayList<String> newsList = new ArrayList<String>();
-    ArrayList<String> newsUrllList = new ArrayList<String>();
+    private ArrayList<String> newsList = new ArrayList<String>();
+    private ArrayList<String> newsUrllList = new ArrayList<String>();
     private ListView newsListView;
     private ArrayAdapter<String> arrayAdapter;
 
@@ -56,6 +57,18 @@ public class MainActivity extends AppCompatActivity {
 
         Timer timer = new Timer();
 
+        //Run every hour to fetch news
+        TimerTask hourlyTask = new TimerTask () {
+            @Override
+            public void run () {
+                fetchNews();
+            }
+        };
+
+        timer.schedule (hourlyTask, 0l, 1000*60*60);
+
+
+
         if (savedInstanceState != null) {
             newsList = savedInstanceState.getStringArrayList("newHeaderArray");
             newsUrllList = savedInstanceState.getStringArrayList("newUrlArray");
@@ -66,11 +79,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void fetchNews (){
+    private void fetchNews(){
         newsList.clear();
         newsUrllList.clear();
         DownloadTask task = new DownloadTask();
-        String urlEndPoint = "https://ajax.googleapis.com/ajax/services/feed/load?v=1.0&q=http://www.androidauthority.com/feed/";
+        String urlEndPoint = "https://content.guardianapis.com/search?q=android&api-key=0b2b7b96-1be8-4401-99d0-86eace8e00c0";
         urlEndPoint = urlEndPoint.replaceAll("\\s+","");
         task.execute(urlEndPoint);
     }
@@ -119,27 +132,22 @@ public class MainActivity extends AppCompatActivity {
             if (result != null) {
                 try {
                     JSONObject jsonObject = new JSONObject(result);
-                    JSONObject responseData = jsonObject.getJSONObject("responseData");
+                    JSONObject responseData = jsonObject.getJSONObject("response");
 
-                    JSONObject feedData = responseData.getJSONObject("feed");
 
-                    JSONArray arr = feedData.getJSONArray("entries");
+                    JSONArray arr = responseData.getJSONArray("results");
 
                     System.out.println("array " + arr);
                     for (int i = 0; i < arr.length(); i++) {
                         JSONObject jsonPart = arr.getJSONObject(i);
 
-                        String newsTitle = jsonPart.getString("title");
-                        String author = jsonPart.getString("author");
-                        newsTitle = newsTitle.replaceAll("<b>", "");
-                        newsTitle = newsTitle.replaceAll("</b>","");
-                        String newsLink = jsonPart.getString("link");
+                        String newsTitle = jsonPart.getString("webTitle");
+                        String newsLink = jsonPart.getString("webUrl");
 
                         System.out.println("title " + newsTitle);
                         System.out.println(newsLink);
 
-                        String newsHeading = newsTitle + " By " + author;
-                        newsList.add(newsHeading);
+                        newsList.add(newsTitle);
                         newsUrllList.add(newsLink);
                     }
                 } catch (JSONException e) {
